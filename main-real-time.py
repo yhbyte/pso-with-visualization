@@ -29,10 +29,10 @@ class PSOConfig:
     w: float = 0.7  # Inertia weight
     c1: float = 1.5  # Cognitive coefficient
     c2: float = 1.5  # Social coefficient
-    diversity_threshold: float = 0.1  # Swarm convergence threshold (spatial diversity)
+    epsilon: float = 0.1  # Swarm convergence threshold (average distance to target)
     bounds: Tuple[Tuple[float, float], Tuple[float, float]] = ((-10, 10), (-10, 10))
     v_max: float = 2.0  # Maximum velocity
-    delay: float = 1.0  # Delay between iterations in seconds
+    delay: float = 0.5  # Delay between iterations in seconds
 
 
 @dataclass
@@ -169,13 +169,13 @@ class PygameVisualizer:
         pygame.draw.circle(self.screen, (255, 255, 255),
                          target_screen, self.vis_config.target_radius, 2)
 
-    def draw_info(self, iteration: int, best_distance: float, converged: bool, diversity: float):
+    def draw_info(self, iteration: int, best_distance: float, converged: bool, average_distance_to_target: float):
         """Draw information text."""
         texts = [
             f"Iteration: {iteration}",
             f"Best Distance: {best_distance:.4f}",
-            f"Swarm Diversity: {diversity:.4f}",
-            f"Diversity Threshold: {self.pso_config.diversity_threshold:.4f}",
+            f"Swarm Average to Target: {average_distance_to_target:.4f}",
+            f"Epsilon: {self.pso_config.epsilon:.4f}",
             f"Status: {'CONVERGED!' if converged else 'Searching...'}"
         ]
 
@@ -211,11 +211,11 @@ class ParticleSwarmOptimizer:
         self.swarm: List[Particle] = []
         self.global_best_position = None
         self.global_best_distance = float('inf')
-        self.history = {'iterations': [], 'best_distances': [], 'positions': [], 'diversity': []}
+        self.history = {'iterations': [], 'best_distances': [], 'positions': [], 'average_distance_to_target': []}
         self.visualizer = PygameVisualizer(config, vis_config)
         self.paused = False
         self.converged = False
-        self.current_diversity = float('inf')
+        self.current_average_to_target = float('inf')
 
     def _calculate_distance(self, position: np.ndarray) -> floating:
         return np.linalg.norm(position - self.target)
@@ -224,12 +224,11 @@ class ParticleSwarmOptimizer:
         positions = np.array([particle.position for particle in self.swarm])
         return np.mean(positions, axis=0)
 
-    def _calculate_swarm_diversity(self) -> float | floating:
+    def _calculate_swarm_average_distance_to_target(self) -> float | floating:
         if not self.swarm:
             return 0.0
 
-        centroid = self._calculate_swarm_centroid()
-        distances = [np.linalg.norm(particle.position - centroid) for particle in self.swarm]
+        distances = [np.linalg.norm(particle.position - self.target) for particle in self.swarm]
         return np.mean(distances)
 
     def _initialize_swarm(self) -> None:
@@ -244,12 +243,11 @@ class ParticleSwarmOptimizer:
                 self.global_best_distance = distance
                 self.global_best_position = particle.position.copy()
 
-        self.current_diversity = self._calculate_swarm_diversity()
+        self.current_average_to_target = self._calculate_swarm_average_distance_to_target()
         logger.info(f"Swarm initialized with {self.config.n_particles} particles")
-        logger.info(f"Initial diversity: {self.current_diversity:.4f}")
+        logger.info(f"Initial average to target: {self.current_average_to_target:.4f}")
 
     def _update_particle_best(self, particle: Particle) -> None:
-        """Update particle's personal best if current position is better."""
         distance = self._calculate_distance(particle.position)
 
         if distance < particle.best_distance:
@@ -262,8 +260,8 @@ class ParticleSwarmOptimizer:
             self.global_best_position = particle.best_position.copy()
 
     def _check_convergence(self) -> bool:
-        self.current_diversity = self._calculate_swarm_diversity()
-        return self.current_diversity < self.config.diversity_threshold
+        self.current_average_to_target = self._calculate_swarm_average_distance_to_target()
+        return self.current_average_to_target < self.config.epsilon
 
     def _handle_events(self) -> bool:
         for event in pygame.event.get():
@@ -305,7 +303,7 @@ class ParticleSwarmOptimizer:
             self.visualizer.draw_particle(particle, is_best)
 
         # Draw info and controls
-        self.visualizer.draw_info(iteration, self.global_best_distance, self.converged, self.current_diversity)
+        self.visualizer.draw_info(iteration, self.global_best_distance, self.converged, self.current_average_to_target)
         self.visualizer.draw_controls()
 
         pygame.display.flip()
@@ -333,7 +331,7 @@ class ParticleSwarmOptimizer:
                 self.history['positions'].append(current_positions)
                 self.history['iterations'].append(iteration)
                 self.history['best_distances'].append(self.global_best_distance)
-                self.history['diversity'].append(self.current_diversity)
+                self.history['average_distance_to_target'].append(self.current_average_to_target)
 
                 # Update each particle
                 for particle in self.swarm:
@@ -346,12 +344,12 @@ class ParticleSwarmOptimizer:
                 if self._check_convergence():
                     self.converged = True
                     logger.info(f"Swarm converged at iteration {iteration + 1}")
-                    logger.info(f"Final diversity: {self.current_diversity:.4f}")
+                    logger.info(f"Final average distance to target: {self.current_average_to_target:.4f}")
                     logger.info(f"Best distance to target: {self.global_best_distance:.4f}")
 
                 # Log progress
                 if (iteration + 1) % 10 == 0:
-                    logger.info(f"Iteration {iteration + 1}: Best distance = {self.global_best_distance:.4f}, Diversity = {self.current_diversity:.4f}")
+                    logger.info(f"Iteration {iteration + 1}: Best distance = {self.global_best_distance:.4f}, Average_distance_to_target = {self.current_average_to_target:.4f}")
 
                 iteration += 1
                 last_update_time = current_time
@@ -385,13 +383,13 @@ class ParticleSwarmOptimizer:
         ax1.set_title('PSO Best Distance History')
         ax1.grid(True, alpha=0.3)
 
-        # Plot diversity
-        ax2.plot(self.history['iterations'], self.history['diversity'], 'g-', linewidth=2)
-        ax2.axhline(y=self.config.diversity_threshold, color='r', linestyle='--',
-                   label=f'Diversity Threshold = {self.config.diversity_threshold}')
+        # Plot average distance to target
+        ax2.plot(self.history['iterations'], self.history['average_distance_to_target'], 'g-', linewidth=2)
+        ax2.axhline(y=self.config.epsilon, color='r', linestyle='--',
+                    label=f'Epsilon = {self.config.epsilon}')
         ax2.set_xlabel('Iteration')
-        ax2.set_ylabel('Swarm Diversity')
-        ax2.set_title('PSO Swarm Diversity History')
+        ax2.set_ylabel('Swarm Average Distance to Target')
+        ax2.set_title('PSO Swarm Average Distance to Target History')
         ax2.grid(True, alpha=0.3)
         ax2.legend()
 
@@ -408,15 +406,15 @@ def main():
 
     # Create custom configuration
     pso_config = PSOConfig(
-        n_particles=40,
+        n_particles=20,
         n_iterations=200,
         w=0.8,
         c1=1.8,
         c2=1.8,
-        diversity_threshold=0.5,  # Swarm converges when particles are within 0.5 units on average from centroid
+        epsilon=0.5,  # Swarm converges when particles are within 0.5 units on average from centroid
         bounds=((-10, 10), (-10, 10)),
         v_max=2.5,
-        delay=0.5  # Half second delay for better visualization
+        delay=0.05  # Half second delay for better visualization
     )
 
     # Create visualization configuration
@@ -436,7 +434,7 @@ def main():
     print(f"Best position found: ({best_position[0]:.4f}, {best_position[1]:.4f})")
     print(f"Distance to target: {best_distance:.4f}")
     print(f"Iterations used: {iterations_used}")
-    print(f"Swarm converged: {optimizer.converged} (diversity < threshold)")
+    print(f"Swarm converged: {optimizer.converged} (average distance to target < epsilon)")
 
     # Show convergence plot
     optimizer.visualize_convergence()
