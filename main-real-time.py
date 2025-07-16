@@ -414,7 +414,7 @@ def main():
         epsilon=0.5,  # Swarm converges when particles are within 0.5 units on average from centroid
         bounds=((-10, 10), (-10, 10)),
         v_max=2.5,
-        delay=0.05  # Half second delay for better visualization
+        delay=0.1  # Half second delay for better visualization
     )
 
     # Create visualization configuration
