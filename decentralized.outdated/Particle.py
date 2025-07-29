@@ -1,11 +1,11 @@
 import numpy as np
 from typing import Dict, Set, Tuple
 
+"""
+Автономна частинка в децентралізованому PSO.
+Кожна частинка знає тільки про себе та своїх сусідів.
+"""
 class Particle:
-    """
-    Автономна частинка в децентралізованому PSO.
-    Кожна частинка знає тільки про себе та своїх сусідів.
-    """
 
     def __init__(self, particle_id: int, dimensions: int, bounds: Tuple[float, float]):
         self.id = particle_id

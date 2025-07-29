@@ -15,7 +15,7 @@ class Swarm:
             for i in range(num_particles)
         ]
 
-        # Налаштувати топологію (за замовчуванням - кільце)
+        # топологія
         self.setup_ring_topology()
 
         # Глобальна статистика (тільки для аналізу)
@@ -65,22 +65,17 @@ class Swarm:
     def perform_iteration(self, fitness_function):
         self.iteration_count += 1
 
-        # 1. Кожна частинка оцінює свій fitness
         for particle in self.particles:
             particle.evaluate_fitness(fitness_function)
 
-        # 2. Частинки обмінюються інформацією з сусідами
         self.exchange_information()
 
-        # 3. Кожна частинка оновлює свою швидкість та позицію
         for particle in self.particles:
             particle.update_pso_vector()
 
-        # 4. Оновити глобальну статистику (тільки для аналізу)
         self.update_global_statistics()
 
     def exchange_information(self):
-        # Зібрати інформацію від всіх частинок
         all_info = {}
         for particle in self.particles:
             all_info[particle.id] = particle.share_information()

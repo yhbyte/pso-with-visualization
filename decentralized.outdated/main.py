@@ -29,13 +29,11 @@ def main():
     print("🔄 Демонстрація децентралізованого PSO")
     print("=" * 50)
 
-    # Параметри
-    num_particles = 20
+    num_particles = 10
     dimensions = 2
     bounds = (-5.0, 5.0)
     max_iterations = 100
 
-    # Створити рій
     swarm = Swarm(num_particles, dimensions, bounds)
 
     # Тестування різних топологій
@@ -86,8 +84,6 @@ def main():
 
 
 def visualize_swarm_behavior(results):
-    """Візуалізація результатів демонстрації"""
-
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     fig.suptitle('Результати децентралізованого PSO', fontsize=16, fontweight='bold')
 
@@ -246,10 +242,7 @@ def visualize_swarm_behavior(results):
 
 
 if __name__ == "__main__":
-    # Запустити демонстрацію
     results = main()
-
-    # Візуалізація (розкоментуйте якщо потрібна)
     visualize_swarm_behavior(results)
 
     print("\n✅ Демонстрація завершена!")
