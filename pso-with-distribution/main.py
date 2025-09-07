@@ -269,7 +269,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sensors", type=int, default=22, help="Кількість сенсорів (default: 22)")
     p.add_argument("--radius", type=float, default=120.0, help="Радіус покриття сенсора (default: 120)")
     p.add_argument("--swarm", type=int, default=28, help="Розмір рою (default: 28)")
-    p.add_argument("--iters", type=int, default=90, help="Кількість ітерацій PSO (default: 90)")
+    p.add_argument("--iters", type=int, default=200, help="Кількість ітерацій PSO (default: 90)")
     p.add_argument("--grid", type=int, default=85, help="Роздільна здатність сітки оцінки (default: 85)")
     p.add_argument("--seed", type=int, default=9, help="Зерно генератора випадковостей (default: 7)")
     return p.parse_args()
