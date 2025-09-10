@@ -1,5 +1,4 @@
 import math
-
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -17,12 +16,14 @@ vertices = [
     (0.0, 7.7)
 ]
 
-#Forbidden zones (x, y, radius)
+# Forbidden zones (x, y, radius)
 forbidden_zones = [
     (7.5, 10, 1.7),
     (7, 13.5, 2),
     (16.5, 13, 1.5),
-    (10, 17.5, 1.5)
+    (10, 17.5, 1.5),
+    (14, 9.5, 1.7),
+    (10, 5, 1.5)
 ]
 
 # Ellipses parameters (a, b)
@@ -80,53 +81,97 @@ ellipse_positions = [(positions_1d[i * 3], positions_1d[i * 3 + 1], positions_1d
 # Create plot
 fig, ax = plt.subplots(figsize=(12, 12))
 
-# Draw main area
-polygon = patches.Polygon(vertices, closed=True,
-                          facecolor='blue', edgecolor='navy',
-                          linewidth=2, alpha=0.25)
-ax.add_patch(polygon)
+# Remove default axes
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['bottom'].set_visible(False)
+ax.spines['left'].set_visible(False)
+
+# Draw custom axes starting from (0, 0)
+# X-axis from 0 to max x
+ax.arrow(0, 0, 22, 0, head_width=0.3, head_length=0.3, fc='black', ec='black', linewidth=1.5)
+# Y-axis from 0 to max y
+ax.arrow(0, 0, 0, 22.5, head_width=0.3, head_length=0.3, fc='black', ec='black', linewidth=1.5)
+
+# Add axis labels
+ax.text(23, -0.5, 'x', fontsize=18, ha='center')
+ax.text(-0.5, 23, 'y', fontsize=18, ha='center')
+
+# Add origin label
+ax.text(-0.5, -0.5, '0', fontsize=18, ha='center')
+
+# Add tick marks and numbers on x-axis
+for x in range(5, 21, 5):
+    ax.plot([x, x], [-0.2, 0.2], 'k-', linewidth=1)  # tick mark
+    ax.text(x, -0.8, str(x), fontsize=18, ha='center')
+
+# Add tick marks and numbers on y-axis
+for y in range(5, 21, 5):
+    ax.plot([-0.2, 0.2], [y, y], 'k-', linewidth=1)  # tick mark
+    ax.text(-0.8, y, str(y), fontsize=18, ha='center', va='center')
+
+# Draw main area in YELLOW (this will be the uncovered area)
+polygon_yellow = patches.Polygon(vertices, closed=True,
+                                 facecolor='yellow', edgecolor='navy',
+                                 linewidth=2, alpha=0.5)
+ax.add_patch(polygon_yellow)
+
+# Draw all ellipse fills (white) first
+for i, ((a, b), (x, y, tau)) in enumerate(zip(ellipse_params, ellipse_positions), 1):
+    angle_deg_user = math.degrees(tau)
+    angle_deg_matplotlib = 90 - angle_deg_user
+
+    # Draw only the fill, no border
+    ellipse_fill = patches.Ellipse((x, y), width=2 * a, height=2 * b, angle=angle_deg_matplotlib,
+                                   facecolor='white', edgecolor='none',
+                                   linewidth=0)
+    ax.add_patch(ellipse_fill)
+
+# Draw all ellipse borders on top (so they're not covered)
+for i, ((a, b), (x, y, tau)) in enumerate(zip(ellipse_params, ellipse_positions), 1):
+    angle_deg_user = math.degrees(tau)
+    angle_deg_matplotlib = 90 - angle_deg_user
+
+    # Draw only the border, no fill
+    ellipse_border = patches.Ellipse((x, y), width=2 * a, height=2 * b, angle=angle_deg_matplotlib,
+                                     facecolor='none', edgecolor='darkgreen',
+                                     linewidth=1.5)
+    ax.add_patch(ellipse_border)
+
+    # Draw center point
+    center = patches.Circle((x, y), 0.1, facecolor='green', edgecolor='darkgreen',
+                            linewidth=1.5)
+    ax.add_patch(center)
+
+# Draw main area outline in blue with transparency
+polygon_outline = patches.Polygon(vertices, closed=True,
+                                  facecolor='none', edgecolor='blue',
+                                  linewidth=3, alpha=0.7)
+ax.add_patch(polygon_outline)
 
 # Draw forbidden zones
 for i, (x, y, r) in enumerate(forbidden_zones, 1):
     circle = patches.Circle((x, y), r,
                             facecolor='red', edgecolor='darkred',
-                            linewidth=1.5, alpha=0.25)
+                            linewidth=1.5, alpha=0.5)
 
     center = patches.Circle((x, y), 0.1, facecolor='red', edgecolor='darkred',
-                   linewidth=1.5)
+                            linewidth=1.5)
     ax.add_patch(circle)
     ax.add_patch(center)
-    #ax.text(x, y, f'Z{i}', ha='center', va='center', fontweight='bold')
-
-# Draw covering ellipses
-for i, ((a, b), (x, y, tau)) in enumerate(zip(ellipse_params, ellipse_positions), 1):
-    angle_deg_user = math.degrees(tau)
-    angle_deg_matplotlib = 90 - angle_deg_user
-    print(f'ellipps {i} angle: {angle_deg_user}')
-
-    ellipse = patches.Ellipse((x, y), width=2 * a, height=2 * b, angle=angle_deg_matplotlib,
-                              facecolor='green', edgecolor='darkgreen',
-                              linewidth=1.5, alpha=0.25)
-    center = patches.Circle((x, y), 0.1, facecolor='green', edgecolor='darkgreen',
-                            linewidth=1.5)
-
-    ax.add_patch(ellipse)
-    ax.add_patch(center)
-    #ax.text(x, y-0.5, f'{i}', ha='center', va='center', fontweight='bold', fontsize=7, color='white')
 
 # Mark vertices
 for i, (x, y) in enumerate(vertices, 1):
     ax.plot(x, y, 'o', color='navy', markersize=6)
-    #ax.text(x, y - 0.5, f'V{i}', ha='center', va='top', color='navy', fontsize=8)
 
 # Configure plot
 ax.set_xlim(-2, 24)
-ax.set_ylim(-2, 25)
+ax.set_ylim(-2, 24)
 ax.set_aspect('equal')
-ax.grid(True, alpha=0.2)
-ax.set_xlabel('X coordinate')
-ax.set_ylabel('Y coordinate')
-ax.set_title('Main Area with Forbidden Zones and 20 Covering Ellipses')
+# Remove grid - no grid() call
+# Remove tick marks
+ax.set_xticks([])
+ax.set_yticks([])
 
 plt.tight_layout()
 plt.show()
